@@ -33,6 +33,21 @@ In Expo Go or on web, everything else works, and the session screen offers **typ
 | `npx eslint src` | Lint |
 | `npx expo export` | Production bundles for iOS, Android and web |
 
+## CI and Android builds
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push and pull request. It checks types, runs lint, and bundles the app for iOS, Android and web.
+
+On pushes to `main` it also builds a release **Android APK** pointed at `https://api.spool.zasstech.com/api/v1`. To get it, open the run under Actions → CI, then download it from the **Artifacts** section at the bottom. Artifacts are kept for 30 days.
+
+The APK is signed with the default debug keystore, so you can sideload it on test phones but can't upload it to Google Play. For a Play release, create an upload keystore and add it as secrets, or switch to EAS Build.
+
+To build the same APK locally (needs JDK 17 and the Android SDK):
+
+```bash
+EXPO_PUBLIC_API_URL=https://api.spool.zasstech.com/api/v1 npx expo prebuild --platform android --clean --no-install
+cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/app-release.apk
+```
+
 ## Screen map
 
 Numbers match the concept wireflow (`01`–`12` mocked up, `P1`–`P10` proposed).
