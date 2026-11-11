@@ -133,8 +133,9 @@ export default function LiveSession() {
         <Card muted>
           <T variant="bodyStrong">On-device transcription isn't available</T>
           <T variant="caption" muted>
-            Spool only transcribes on your phone so audio never leaves it, and this device (or Expo Go) doesn't support
-            that. Write notes about the session instead and Spool will summarize them.
+            {rec.errorMessage ??
+              "Spool only transcribes on your phone so audio never leaves it, and this device (or Expo Go) doesn't support that."}{' '}
+            Write notes about the session instead and Spool will summarize them.
           </T>
         </Card>
       ) : null}

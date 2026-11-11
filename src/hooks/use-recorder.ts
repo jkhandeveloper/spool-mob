@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
-import { speech, speechSupport } from '@/lib/speech';
+import { ensureOfflineLocale, speech, speechSupport } from '@/lib/speech';
 
 export type RecorderState =
   | 'starting'
@@ -79,6 +79,13 @@ export function useRecorder() {
           case 'not-allowed':
             set('denied');
             return;
+          case 'language-not-supported':
+          case 'service-not-allowed':
+            setErrorMessage(
+              'The English offline speech model is not installed or available on this device. You can write session notes instead.',
+            );
+            set('unsupported');
+            return;
           case 'interrupted':
           case 'audio-capture':
             set('interrupted');
@@ -111,6 +118,12 @@ export function useRecorder() {
       if (cancelled) return;
       if (!perm.granted) {
         set('denied');
+        return;
+      }
+      const locale = await ensureOfflineLocale('en-US');
+      if (!locale.ready) {
+        setErrorMessage(locale.message ?? 'On-device speech recognition is not ready.');
+        set('unsupported');
         return;
       }
       begin();
