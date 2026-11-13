@@ -1,4 +1,5 @@
 import type { ExpoSpeechRecognitionModule as ModuleType } from 'expo-speech-recognition';
+import { Platform } from 'react-native';
 
 /**
  * expo-speech-recognition is a native module: it is missing in Expo Go and on
@@ -29,5 +30,45 @@ export function speechSupport(): SpeechSupport {
     return 'ok';
   } catch {
     return 'unavailable';
+  }
+}
+
+/**
+ * Android can support on-device recognition while still missing the locale's
+ * offline model. Ask Android to install it before calling start(), otherwise
+ * the recognizer emits the rather opaque "language not downloaded" error.
+ */
+export async function ensureOfflineLocale(locale: string): Promise<{
+  ready: boolean;
+  message?: string;
+}> {
+  if (!mod || Platform.OS !== 'android') return { ready: speechSupport() === 'ok' };
+
+  try {
+    const supported = await mod.getSupportedLocales({});
+    if (supported.installedLocales.includes(locale)) return { ready: true };
+
+    if (!supported.locales.includes(locale)) {
+      return {
+        ready: false,
+        message: `On-device speech recognition does not support ${locale} on this device.`,
+      };
+    }
+
+    const result = await mod.androidTriggerOfflineModelDownload({ locale });
+    if (result.status === 'download_success') return { ready: true };
+
+    return {
+      ready: false,
+      message:
+        result.status === 'opened_dialog'
+          ? 'Android opened the download prompt for the English speech model. Confirm it, then start another session.'
+          : 'The English speech model is downloading. Start another session after the download finishes.',
+    };
+  } catch {
+    return {
+      ready: false,
+      message: 'The English speech model is not ready on this device. You can write session notes instead.',
+    };
   }
 }
