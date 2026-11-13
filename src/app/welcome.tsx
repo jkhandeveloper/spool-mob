@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { Button, Gap, Screen, Stack, T } from '@/components/ui';
+import { Button, Gap, Logo, Screen, Stack, T } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -32,16 +31,8 @@ export default function Welcome() {
           </View>
         </>
       }>
-      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ height: 110 }}>
-        <Svg width="100%" height="110" viewBox="0 0 320 110" preserveAspectRatio="xMidYMid meet">
-          <Path
-            d="M0 70 C 60 40, 120 95, 175 70 C 230 45, 225 5, 200 8 C 170 12, 175 75, 230 75 C 270 75, 290 62, 320 66"
-            stroke={c.text}
-            strokeWidth={2.5}
-            fill="none"
-            strokeLinecap="round"
-          />
-        </Svg>
+      <View style={{ alignItems: 'center', paddingTop: Spacing.lg }}>
+        <Logo size={112} />
       </View>
       <Gap size={Spacing.xl} />
       <T variant="display">A place for your loose threads.</T>

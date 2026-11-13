@@ -43,7 +43,7 @@ export function DateTimeField({
             display="compact"
             minuteInterval={5}
             accessibilityLabel={label}
-            onChange={(_, d) => d && onChange(d)}
+            onValueChange={(_, d) => onChange(d)}
           />
         </View>
         {icon}
@@ -60,9 +60,8 @@ export function DateTimeField({
           DateTimePickerAndroid.open({
             value,
             mode,
-            onChange: (e, d) => {
-              if (e.type === 'set' && d) onChange(d);
-            },
+            // Fires only when a value is picked; dismissing calls onDismiss instead.
+            onValueChange: (_, d) => onChange(d),
           })
         }
         style={rowStyle}>

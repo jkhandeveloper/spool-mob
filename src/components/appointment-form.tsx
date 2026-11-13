@@ -30,9 +30,11 @@ export function draftFrom(a?: Appointment): AppointmentDraft {
       notes: a.notes ?? '',
     };
   }
-  // Default: same time next week, rounded to the hour.
+  // Default: same time next week, rounded to the hour — people usually plan this
+  // right after a session. Outside daytime hours, suggest 3 PM instead.
   const d = new Date(Date.now() + 7 * 86_400_000);
   d.setMinutes(0, 0, 0);
+  if (d.getHours() < 8 || d.getHours() > 19) d.setHours(15);
   return { startsAt: d, location: '', kind: 'in_person', reminderMinutesBefore: 60, notes: '' };
 }
 

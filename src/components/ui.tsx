@@ -16,9 +16,11 @@ import {
   type TextInputProps,
   type TextStyle,
   type ViewStyle,
+  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useFontScale, useTheme } from '@/hooks/use-theme';
 
@@ -96,6 +98,34 @@ export function Wordmark({ onBack }: { onBack?: () => void }) {
         style={{ fontSize: 26, fontWeight: '800', color: c.text, letterSpacing: -0.5 }}>
         Spool
       </Text>
+    </View>
+  );
+}
+
+const SPOOL_MARK = require('@/assets/images/spool-mark.png');
+
+/**
+ * The Spool logo: the thread-and-spool line art on a rounded tile.
+ * Light mode shows the brand tile (white on black); dark mode keeps the
+ * white thread on a dark tile so it doesn't glare.
+ */
+export function Logo({ size = 96 }: { size?: number }) {
+  const c = useTheme();
+  const dark = useColorScheme() === 'dark';
+  return (
+    <View
+      accessibilityRole="image"
+      accessibilityLabel="Spool logo"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.225,
+        overflow: 'hidden',
+        backgroundColor: dark ? c.surface : '#000000',
+        borderWidth: dark ? StyleSheet.hairlineWidth : 0,
+        borderColor: c.border,
+      }}>
+      <Image source={SPOOL_MARK} style={{ width: size, height: size }} tintColor="#FFFFFF" contentFit="contain" />
     </View>
   );
 }
@@ -378,13 +408,22 @@ export function ToggleRow({ label, value, onChange, hint }: {
   onChange: (v: boolean) => void;
   hint?: string;
 }) {
+  const c = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.sm }}>
       <View style={{ flex: 1 }}>
         <T variant="bodyStrong">{label}</T>
         {hint ? <T variant="caption" muted>{hint}</T> : null}
       </View>
-      <Switch value={value} onValueChange={onChange} accessibilityLabel={label} />
+      {/* Monochrome brand: the platform default (teal on Android, green on iOS) is off-palette. */}
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        accessibilityLabel={label}
+        trackColor={{ false: c.border, true: c.primary }}
+        thumbColor={Platform.OS === 'android' ? (value ? c.onPrimary : c.surface) : undefined}
+        ios_backgroundColor={c.border}
+      />
     </View>
   );
 }

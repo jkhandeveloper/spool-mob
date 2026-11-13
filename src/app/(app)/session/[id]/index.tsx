@@ -55,9 +55,9 @@ export default function SessionSummary() {
       </T>
       {s.topics.length ? <T variant="caption" muted>{s.topics.join(' · ')}</T> : null}
 
-      <Section title="Main points">
-        <EditableCard title="Main points" items={s.mainPoints} onSave={(mainPoints) => update.mutateAsync({ mainPoints })} saving={update.isPending} />
-      </Section>
+      {/* The card carries the "Main points" heading and its edit button, so no Section title here. */}
+      <Gap size={Spacing.xl} />
+      <EditableCard title="Main points" items={s.mainPoints} onSave={(mainPoints) => update.mutateAsync({ mainPoints })} saving={update.isPending} />
 
       <Section title="Key takeaways" subtitle="Small steps create meaningful change.">
         <Stack>

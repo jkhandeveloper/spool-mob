@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button, Card, ErrorState, Field, Gap, InlineError, Loading, Screen, Stack, T, ToggleRow } from '@/components/ui';
 import { api } from '@/lib/api';
 import { confirm } from '@/lib/confirm';
-import { formatLongDate } from '@/lib/format';
+import { formatLongDate, journalBodyWithoutTitle } from '@/lib/format';
 
 // P6 Journal entry detail: read, edit, delete, include/exclude from session prompts
 export default function EntryDetail() {
@@ -64,7 +64,7 @@ export default function EntryDetail() {
         <>
           <T variant="title">{entry.title}</T>
           <Gap />
-          <T selectable>{entry.body}</T>
+          <T selectable>{journalBodyWithoutTitle(entry.title, entry.body)}</T>
           <Gap size={24} />
           <Card muted>
             <ToggleRow

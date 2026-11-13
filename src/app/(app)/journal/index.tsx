@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Button, EmptyState, ErrorState, ListRow, Loading, Screen, Stack, T, Gap } from '@/components/ui';
 import { api } from '@/lib/api';
-import { formatShortDate } from '@/lib/format';
+import { formatShortDate, journalBodyWithoutTitle } from '@/lib/format';
 
 // 06 Thought journal (journal list)
 export default function JournalList() {
@@ -33,7 +33,7 @@ export default function JournalList() {
               key={e.id}
               eyebrow={formatShortDate(e.createdAt) + (e.includeInPrompts ? '' : ' · PRIVATE')}
               title={e.title}
-              subtitle={e.body}
+              subtitle={journalBodyWithoutTitle(e.title, e.body)}
               onPress={() => router.push(`/journal/${e.id}`)}
             />
           ))}
@@ -42,3 +42,4 @@ export default function JournalList() {
     </Screen>
   );
 }
+

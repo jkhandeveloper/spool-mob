@@ -33,19 +33,44 @@ In Expo Go or on web, everything else works, and the session screen offers **typ
 | `npx eslint src` | Lint |
 | `npx expo export` | Production bundles for iOS, Android and web |
 
-## CI and Android builds
+## CI builds for real phones
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push and pull request. It checks types, runs lint, and bundles the app for iOS, Android and web.
 
-On pushes to `main` it also builds a release **Android APK** pointed at `https://api.spool.zasstech.com/api/v1`. To get it, open the run under Actions → CI, then download it from the **Artifacts** section at the bottom. Artifacts are kept for 30 days.
+On pushes to `main` (or **Run workflow** under Actions → CI) it also builds installable apps pointed at `https://api.spool.zasstech.com/api/v1`. Open the run under Actions → CI and download them from **Artifacts** at the bottom. Artifacts are kept for 30 days.
 
-The APK is signed with the default debug keystore, so you can sideload it on test phones but can't upload it to Google Play. For a Play release, create an upload keystore and add it as secrets, or switch to EAS Build.
+| Artifact | Install on a phone |
+|---|---|
+| `spool-<version>-<sha>.apk` | Android: copy to the phone and open it (allow "install unknown apps"). Signed with the debug keystore, so it can be sideloaded but not uploaded to Google Play. |
+| `spool-<version>-<sha>-unsigned.ipa` | iPhone: iOS only installs signed apps. Sign and install it from a computer with [Sideloadly](https://sideloadly.io) or AltStore using your Apple ID (free Apple IDs: the app expires after 7 days and the iPhone needs Developer Mode on). |
+
+For TestFlight or ad-hoc iPhone builds that install directly, you need an Apple Developer account. The simplest route is EAS: `npx eas-cli@latest build --platform ios --profile preview`, which stores the signing certificates for you. For Google Play, create an upload keystore and add it as secrets, or use EAS Build.
 
 To build the same APK locally (needs JDK 17 and the Android SDK):
 
 ```bash
 EXPO_PUBLIC_API_URL=https://api.spool.zasstech.com/api/v1 npx expo prebuild --platform android --clean --no-install
 cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/app-release.apk
+```
+
+## Brand assets
+
+The icons and splash are generated from the source logo (`assets/images/logo-source.jpg`, white thread on a black tile) by [scripts/make-icons.cjs](scripts/make-icons.cjs):
+
+| Asset | Used for |
+|---|---|
+| `icon.png`, `ios-light.png`, `ios-dark.png`, `ios-tinted.png` | iOS app icon (light, dark and tinted appearances); the full-bleed square is masked by iOS |
+| `android-icon-foreground.png` + black background | Android adaptive icon (thread kept inside the safe zone) |
+| `android-icon-monochrome.png` | Android 13+ themed icon |
+| `splash-icon.png` / `splash-icon-dark.png` | Splash: black tile on white (light mode), white thread on near-black (dark mode) |
+| `spool-mark.png` | In-app `Logo` component in [src/components/ui.tsx](src/components/ui.tsx) (Welcome screen) |
+
+To regenerate after changing the logo:
+
+```bash
+npm install --no-save sharp
+node scripts/make-icons.cjs assets/images/logo-source.jpg assets/images /tmp
+npx expo prebuild --clean --no-install   # or let CI/EAS do it
 ```
 
 ## Screen map
@@ -101,6 +126,5 @@ Tokens: the refresh token lives in SecureStore (Keychain/Keystore), and the acce
 
 ## Known gaps
 
-- There are no custom brand icons or splash art yet; the Expo defaults are still in place.
 - Password reset emails depend on the API getting a mail provider. In development, the API returns the reset code directly and the app uses it.
 - Transcription language is fixed to `en-US`.

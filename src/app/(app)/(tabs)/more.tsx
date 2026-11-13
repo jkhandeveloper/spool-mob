@@ -60,7 +60,8 @@ export default function MoreScreen() {
             title="If you need support now"
             subtitle="Spool isn't an emergency service. If you're in crisis, contact your local emergency number or a crisis line."
             onPress={() => Linking.openURL('https://findahelpline.com')}
-          />        </Stack>
+          />
+        </Stack>
       </Section>
 
       <Gap size={32} />

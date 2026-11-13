@@ -39,3 +39,10 @@ export function formatDuration(totalSeconds: number): string {
 
 export const sameDay = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+/** The title is derived from the first line, so don't repeat it in the preview. */
+export function journalBodyWithoutTitle(title: string, body: string): string {
+  const [first, ...rest] = body.trim().split('\n');
+  const remainder = rest.join('\n').trim();
+  return first.trim() === title.trim() && remainder ? remainder : body;
+}
