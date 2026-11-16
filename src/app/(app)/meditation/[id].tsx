@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { useQuery } from '@tanstack/react-query';
 import { useScreenAwake } from '@/hooks/use-screen-awake';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Button, ErrorState, Gap, Loading, Screen, T } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
@@ -18,10 +19,62 @@ export default function MeditationPlayer() {
   const q = useQuery({ queryKey: ['meditation', id], queryFn: () => api.meditations.get(id), staleTime: Infinity });
   const [playRequested, setPlaying] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const sound = useRef<Audio.Sound | null>(null);
 
   const total = q.data?.durationSeconds ?? 0;
   const done = total > 0 && elapsed >= total;
   const playing = playRequested && !done;
+
+  useEffect(() => {
+    void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+    return () => {
+      void sound.current?.unloadAsync();
+      sound.current = null;
+    };
+  }, []);
+
+  const onAudioStatus = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) return;
+    setElapsed(status.didJustFinish ? total : Math.floor(status.positionMillis / 1000));
+    if (status.didJustFinish) setPlaying(false);
+  };
+
+  const togglePlayback = async () => {
+    if (sound.current) {
+      if (playing) {
+        await sound.current.pauseAsync();
+        setPlaying(false);
+      } else {
+        await sound.current.playAsync();
+        setPlaying(true);
+      }
+      return;
+    }
+
+    if (!playRequested) {
+      setAudioLoading(true);
+      setAudioError(null);
+      try {
+        const audio = await api.meditations.audio(id);
+        const created = await Audio.Sound.createAsync(
+          { uri: `data:${audio.mimeType};base64,${audio.audioBase64}` },
+          { shouldPlay: true, progressUpdateIntervalMillis: 500 },
+          onAudioStatus,
+        );
+        sound.current = created.sound;
+        setPlaying(true);
+      } catch (error) {
+        setAudioError(error instanceof Error ? error.message : 'Guided audio is unavailable.');
+        setPlaying(true);
+      } finally {
+        setAudioLoading(false);
+      }
+    } else {
+      setPlaying((p) => !p);
+    }
+  };
 
   useEffect(() => {
     if (!playing) return;
@@ -74,9 +127,9 @@ export default function MeditationPlayer() {
       <Gap size={Spacing.xl} />
       <View style={{ alignItems: 'center', paddingBottom: Spacing.xxl }}>
         <Pressable
-          onPress={() => setPlaying((p) => !p)}
+          onPress={() => void togglePlayback()}
           accessibilityRole="button"
-          accessibilityLabel={playing ? 'Pause' : 'Play'}
+          accessibilityLabel={audioLoading ? 'Loading guided audio' : playing ? 'Pause' : 'Play'}
           style={({ pressed }) => ({
             width: 76,
             height: 76,
@@ -86,8 +139,9 @@ export default function MeditationPlayer() {
             justifyContent: 'center',
             opacity: pressed ? 0.8 : 1,
           })}>
-          <Ionicons name={playing ? 'pause' : 'play'} size={32} color={c.onPrimary} />
+          <Ionicons name={audioLoading ? 'hourglass-outline' : playing ? 'pause' : 'play'} size={32} color={c.onPrimary} />
         </Pressable>
+        {audioError ? <T variant="caption" muted center style={{ marginTop: Spacing.sm }}>{audioError} Using the written timer instead.</T> : null}
       </View>
     </Screen>
   );

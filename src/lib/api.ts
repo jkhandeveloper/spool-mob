@@ -173,5 +173,6 @@ export const api = {
   meditations: {
     list: () => get<Meditation[]>('/meditations'),
     get: (id: string) => get<Meditation>(`/meditations/${id}`),
+    audio: (id: string) => post<{ mimeType: string; audioBase64: string }>(`/meditations/${id}/audio`),
   },
 };
