@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Audio, type AVPlaybackStatus } from 'expo-av';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useQuery } from '@tanstack/react-query';
 import { useScreenAwake } from '@/hooks/use-screen-awake';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Button, ErrorState, Gap, Loading, Screen, T } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
@@ -18,36 +18,43 @@ export default function MeditationPlayer() {
   const c = useTheme();
   const q = useQuery({ queryKey: ['meditation', id], queryFn: () => api.meditations.get(id), staleTime: Infinity });
   const [playRequested, setPlaying] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
+  const [timerElapsed, setTimerElapsed] = useState(0);
   const [audioLoading, setAudioLoading] = useState(false);
+  const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
-  const sound = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer(null, { updateInterval: 500 });
+  const audioStatus = useAudioPlayerStatus(player);
 
   const total = q.data?.durationSeconds ?? 0;
+  const audioDone =
+    audioLoaded &&
+    audioStatus.isLoaded &&
+    (audioStatus.didJustFinish ||
+      (audioStatus.duration > 0 &&
+        !audioStatus.playing &&
+        audioStatus.currentTime >= audioStatus.duration - 0.1));
+  const elapsed =
+    audioLoaded && audioStatus.isLoaded
+      ? audioDone
+        ? total
+        : Math.floor(audioStatus.currentTime)
+      : timerElapsed;
   const done = total > 0 && elapsed >= total;
   const playing = playRequested && !done;
 
   useEffect(() => {
-    void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-    return () => {
-      void sound.current?.unloadAsync();
-      sound.current = null;
-    };
+    void setAudioModeAsync({ playsInSilentMode: true });
   }, []);
 
-  const onAudioStatus = (status: AVPlaybackStatus) => {
-    if (!status.isLoaded) return;
-    setElapsed(status.didJustFinish ? total : Math.floor(status.positionMillis / 1000));
-    if (status.didJustFinish) setPlaying(false);
-  };
-
   const togglePlayback = async () => {
-    if (sound.current) {
+    if (audioLoading) return;
+
+    if (audioLoaded) {
       if (playing) {
-        await sound.current.pauseAsync();
+        player.pause();
         setPlaying(false);
       } else {
-        await sound.current.playAsync();
+        player.play();
         setPlaying(true);
       }
       return;
@@ -58,12 +65,9 @@ export default function MeditationPlayer() {
       setAudioError(null);
       try {
         const audio = await api.meditations.audio(id);
-        const created = await Audio.Sound.createAsync(
-          { uri: `data:${audio.mimeType};base64,${audio.audioBase64}` },
-          { shouldPlay: true, progressUpdateIntervalMillis: 500 },
-          onAudioStatus,
-        );
-        sound.current = created.sound;
+        player.replace({ uri: `data:${audio.mimeType};base64,${audio.audioBase64}` });
+        player.play();
+        setAudioLoaded(true);
         setPlaying(true);
       } catch (error) {
         setAudioError(error instanceof Error ? error.message : 'Guided audio is unavailable.');
@@ -77,10 +81,19 @@ export default function MeditationPlayer() {
   };
 
   useEffect(() => {
-    if (!playing) return;
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    if (!playing || audioLoaded) return;
+    const t = setInterval(() => setTimerElapsed((e) => e + 1), 1000);
     return () => clearInterval(t);
-  }, [playing]);
+  }, [audioLoaded, playing]);
+
+  const startAgain = async () => {
+    setTimerElapsed(0);
+    if (audioLoaded) {
+      await player.seekTo(0);
+      player.play();
+    }
+    setPlaying(true);
+  };
 
   const close = () => router.back();
 
@@ -98,7 +111,7 @@ export default function MeditationPlayer() {
           <T variant="title" center>Well done</T>
           <T center muted>You took {Math.round(total / 60)} minutes for yourself. Carry that calm with you.</T>
         </View>
-        <Button title="Start again" variant="ghost" onPress={() => { setElapsed(0); setPlaying(true); }} />
+        <Button title="Start again" variant="ghost" onPress={() => void startAgain()} />
       </Screen>
     );
   }
