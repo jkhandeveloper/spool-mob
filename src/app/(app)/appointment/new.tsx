@@ -5,7 +5,7 @@ import { Button, Gap, InlineError, OrDivider, Screen, T } from '@/components/ui'
 import { api } from '@/lib/api';
 import { syncAppointmentReminder } from '@/lib/notifications';
 
-// 05 Next appointment: save date/time/location or graduate
+// 05 Next appointment: save date/time/location or complete classes
 export default function NewAppointment() {
   const qc = useQueryClient();
   const [draft, setDraft] = useAppointmentDraft();
@@ -33,7 +33,7 @@ export default function NewAppointment() {
       <Gap size={8} />
       <Button title="Save appointment" onPress={() => save.mutate()} loading={save.isPending} />
       <OrDivider />
-      <Button title="I've graduated!" variant="secondary" icon="school-outline" onPress={() => router.push('/graduation')} />
+      <Button title="My classes are complete" variant="secondary" icon="school-outline" onPress={() => router.push('/graduation')} />
     </Screen>
   );
 }

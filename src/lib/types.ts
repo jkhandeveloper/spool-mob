@@ -104,6 +104,23 @@ export interface Meditation {
   steps: MeditationStep[];
 }
 
+export interface MeditationAudioSegment {
+  at: number;
+  durationSeconds: number;
+  mimeType: string;
+  audioBase64: string;
+}
+
+export interface MeditationAudio {
+  segments: MeditationAudioSegment[];
+  silence: {
+    mimeType: string;
+    fiveSecondBase64: string;
+    oneSecondBase64: string;
+    quarterSecondBase64: string;
+  };
+}
+
 export interface Today {
   user: User;
   reminder: string;

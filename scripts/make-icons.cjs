@@ -1,102 +1,98 @@
-// Generates the iOS/Android icons, splash and in-app mark from the Spool logo.
+// Generates app icons, the in-app logo and splash assets from the supplied artwork.
 // Needs sharp: `npm install --no-save sharp`. See README "Brand assets".
-// Builds Spool's brand assets from the supplied logo JPEG.
-// usage: node make-icons.cjs <logo.jpg> <out-dir> <preview-dir>
+// usage: node make-icons.cjs <logo.jpg> <splash.jpg> <out-dir> [preview-dir]
+const fs = require('node:fs');
+const path = require('node:path');
 const sharp = require('sharp');
-const path = require('path');
 
-const [, , SRC, OUT, PREVIEW] = process.argv;
+const [, , LOGO_SRC, SPLASH_SRC, OUT, PREVIEW] = process.argv;
+const N = 1024;
+
+if (!LOGO_SRC || !SPLASH_SRC || !OUT) {
+  console.error('usage: node make-icons.cjs <logo.jpg> <splash.jpg> <out-dir> [preview-dir]');
+  process.exit(1);
+}
+
+function out(filename) {
+  return path.join(OUT, filename);
+}
+
+async function inkMark(rgb) {
+  const markSize = 780;
+  const { data, info } = await sharp(LOGO_SRC)
+    .rotate()
+    .resize(markSize, markSize, { fit: 'contain', background: '#ffffff' })
+    .greyscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const rgba = Buffer.alloc(info.width * info.height * 4);
+
+  for (let index = 0; index < data.length; index += 1) {
+    // Keep the black lettering and spool while dropping the white tile and shadow.
+    const alpha = Math.max(0, Math.min(255, (120 - data[index]) * 5));
+    rgba[index * 4] = rgb[0];
+    rgba[index * 4 + 1] = rgb[1];
+    rgba[index * 4 + 2] = rgb[2];
+    rgba[index * 4 + 3] = alpha;
+  }
+
+  const padding = Math.floor((N - markSize) / 2);
+  return sharp(rgba, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .extend({
+      top: padding,
+      bottom: N - markSize - padding,
+      left: padding,
+      right: N - markSize - padding,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    })
+    .png()
+    .toBuffer();
+}
 
 async function main() {
-  const { data, info } = await sharp(SRC).greyscale().raw().toBuffer({ resolveWithObject: true });
-  const W = info.width, H = info.height;
-  const lum = (x, y) => data[y * W + x];
+  fs.mkdirSync(OUT, { recursive: true });
 
-  // The logo is white line art inside a black rounded square on a white page.
-  // Inside = between the leftmost and rightmost black pixel of each row.
-  const rowL = new Int32Array(H).fill(-1), rowR = new Int32Array(H).fill(-1);
-  let top = H, bottom = -1, left = W, right = -1;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) if (lum(x, y) < 60) { rowL[y] = x; break; }
-    for (let x = W - 1; x >= 0; x--) if (lum(x, y) < 60) { rowR[y] = x; break; }
-    if (rowL[y] >= 0 && rowR[y] - rowL[y] > W * 0.3) {
-      top = Math.min(top, y); bottom = Math.max(bottom, y);
-      left = Math.min(left, rowL[y]); right = Math.max(right, rowR[y]);
-    }
+  const logo = await sharp(LOGO_SRC)
+    .rotate()
+    .resize(N, N, { fit: 'cover', position: 'centre' })
+    .png()
+    .toBuffer();
+  const blackInk = await inkMark([0, 0, 0]);
+  const whiteInk = await inkMark([255, 255, 255]);
+  const whiteBackground = await sharp({
+    create: { width: N, height: N, channels: 4, background: '#ffffff' },
+  })
+    .png()
+    .toBuffer();
+
+  await sharp(logo).toFile(out('icon.png'));
+  await sharp(logo).toFile(out('ios-light.png'));
+  await sharp(logo).toFile(out('ios-dark.png'));
+  await sharp(logo).greyscale().toFile(out('ios-tinted.png'));
+  await sharp(blackInk).toFile(out('android-icon-foreground.png'));
+  await sharp(whiteInk).toFile(out('android-icon-monochrome.png'));
+  await sharp(whiteBackground).toFile(out('android-icon-background.png'));
+  await sharp(logo).toFile(out('spool-mark.png'));
+  await sharp(logo).resize(96, 96).toFile(out('favicon.png'));
+
+  // Remove the phone-screenshot whitespace while preserving the full logo, tagline and flourish.
+  const splash = await sharp(SPLASH_SRC)
+    .rotate()
+    .trim({ background: '#ffffff', threshold: 12 })
+    .extend({ top: 72, bottom: 72, left: 56, right: 56, background: '#ffffff' })
+    .png()
+    .toBuffer();
+  await sharp(splash).toFile(out('splash-icon.png'));
+  await sharp(splash).toFile(out('splash-icon-dark.png'));
+
+  if (PREVIEW) {
+    fs.mkdirSync(PREVIEW, { recursive: true });
+    await sharp(logo).resize(420, 420).toFile(path.join(PREVIEW, 'app-logo.png'));
+    await sharp(splash).resize({ width: 540 }).toFile(path.join(PREVIEW, 'splash-logo.png'));
   }
-  const size = Math.max(right - left, bottom - top) + 1;
-  const cx = Math.round((left + right) / 2), cy = Math.round((top + bottom) / 2);
-  const x0 = cx - Math.floor(size / 2), y0 = cy - Math.floor(size / 2);
-  console.log({ W, H, left, right, top, bottom, size });
-
-  // Alpha mask of the white strokes, in the square's own coordinates.
-  const inset = 4; // ignore the anti-aliased edge of the black square
-  const mask = Buffer.alloc(size * size);
-  for (let j = 0; j < size; j++) {
-    const y = y0 + j;
-    if (y < 0 || y >= H || rowL[y] < 0) continue;
-    for (let i = 0; i < size; i++) {
-      const x = x0 + i;
-      if (x < rowL[y] + inset || x > rowR[y] - inset) continue;
-      const v = lum(x, y);
-      mask[j * size + i] = Math.max(0, Math.min(255, Math.round(((v - 35) / (215 - 35)) * 255)));
-    }
-  }
-  const N = 1024;
-  const maskImg = await sharp(mask, { raw: { width: size, height: size, channels: 1 } })
-    .resize(N, N, { kernel: 'lanczos3' }).extractChannel(0).raw().toBuffer();
-
-  // RGBA image of the strokes in `rgb`, scaled by `scale` and centred on an N canvas.
-  async function strokes(rgb, scale = 1) {
-    const s = Math.round(N * scale);
-    const m = scale === 1 ? maskImg : await sharp(maskImg, { raw: { width: N, height: N, channels: 1 } }).resize(s, s).extractChannel(0).raw().toBuffer();
-    const px = Buffer.alloc(s * s * 4);
-    for (let k = 0; k < s * s; k++) { px[k * 4] = rgb[0]; px[k * 4 + 1] = rgb[1]; px[k * 4 + 2] = rgb[2]; px[k * 4 + 3] = m[k]; }
-    const pad = Math.floor((N - s) / 2);
-    return sharp(px, { raw: { width: s, height: s, channels: 4 } })
-      .extend({ top: pad, bottom: N - s - pad, left: pad, right: N - s - pad, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png().toBuffer();
-  }
-  const solid = (hex, alpha = 1) => sharp({ create: { width: N, height: N, channels: 4, background: hex + (alpha === 1 ? '' : '') } });
-  const roundMask = Buffer.from(`<svg width="${N}" height="${N}"><rect width="${N}" height="${N}" rx="${N * 0.225}" fill="#fff"/></svg>`);
-
-  const white = [255, 255, 255];
-  const whiteStrokes = await strokes(white);
-  const whiteStrokesSafe = await strokes(white, 0.8);
-
-  // Full-bleed square: the OS applies its own corner mask (iOS + legacy Android).
-  const fullBleed = await solid('#000000').composite([{ input: whiteStrokes }]).flatten({ background: '#000000' }).png().toBuffer();
-  // Rounded tile with transparent corners (splash, favicon, previews).
-  const tile = await sharp(fullBleed).composite([{ input: roundMask, blend: 'dest-in' }]).png().toBuffer();
-
-  const out = (f) => path.join(OUT, f);
-  await sharp(fullBleed).toFile(out('icon.png'));
-  await sharp(fullBleed).toFile(out('ios-light.png'));
-  await sharp(fullBleed).toFile(out('ios-dark.png'));
-  // Tinted: iOS turns the luminance into the tint; white strokes on black work as-is.
-  await sharp(fullBleed).greyscale().toFile(out('ios-tinted.png'));
-  await sharp(whiteStrokesSafe).toFile(out('android-icon-foreground.png'));
-  await sharp(whiteStrokesSafe).toFile(out('android-icon-monochrome.png'));
-  await solid('#000000').png().toFile(out('android-icon-background.png'));
-  await sharp(tile).toFile(out('splash-icon.png'));
-  await sharp(whiteStrokes).toFile(out('splash-icon-dark.png'));
-  await sharp(whiteStrokes).toFile(out('spool-mark.png')); // tintable in-app mark
-  await sharp(tile).resize(48, 48).toFile(out('favicon.png'));
-
-  // Previews: how the icons look on device masks, light & dark.
-  const circle = Buffer.from(`<svg width="${N}" height="${N}"><circle cx="${N / 2}" cy="${N / 2}" r="${N / 2}" fill="#fff"/></svg>`);
-  const adaptiveFull = await solid('#000000').composite([{ input: whiteStrokesSafe }]).flatten({ background: '#000' }).png().toBuffer();
-  const adaptive = await sharp(await sharp(adaptiveFull).extract({ left: 171, top: 171, width: 682, height: 682 }).resize(N, N)
-    .png().toBuffer()).composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
-  const monoFull = await sharp({ create: { width: N, height: N, channels: 4, background: '#3b4a3f' } })
-    .composite([{ input: await sharp(whiteStrokesSafe).tint({ r: 200, g: 230, b: 205 }).toBuffer() }]).png().toBuffer();
-  const mono = await sharp(await sharp(monoFull).extract({ left: 171, top: 171, width: 682, height: 682 }).resize(N, N)
-    .png().toBuffer()).composite([{ input: circle, blend: 'dest-in' }]).png().toBuffer();
-  const cell = 300, gap = 40;
-  const items = [tile, adaptive, mono, await sharp(whiteStrokes).png().toBuffer()];
-  const sheet = async (bg) => sharp({ create: { width: gap + items.length * (cell + gap), height: cell + 2 * gap, channels: 4, background: bg } })
-    .composite(await Promise.all(items.map(async (b, i) => ({ input: await sharp(b).resize(cell, cell).toBuffer(), left: gap + i * (cell + gap), top: gap }))));
-  await (await sheet('#ffffff')).png().toFile(path.join(PREVIEW, 'icons-light.png'));
-  await (await sheet('#0B0B0C')).png().toFile(path.join(PREVIEW, 'icons-dark.png'));
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
