@@ -1,3 +1,4 @@
+import { Directory, File, Paths } from 'expo-file-system';
 import { API_URL } from './config';
 import { tokenStore } from './token-store';
 import type {
@@ -103,6 +104,41 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
   return data as T;
 }
 
+/**
+ * Downloads an authenticated binary (e.g. guided audio) to `destination`.
+ * Writes to a `.part` file first so an interrupted download is never mistaken
+ * for a complete one, and refreshes the access token once on failure.
+ */
+async function download(path: string, destination: File, retried = false): Promise<File> {
+  const partial = new File(`${destination.uri}.part`);
+  if (partial.exists) partial.delete();
+  try {
+    await File.downloadFileAsync(`${API_URL}${path}`, partial, {
+      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      idempotent: true,
+    });
+  } catch {
+    if (partial.exists) partial.delete();
+    if (!retried && (await refreshTokens().catch(() => false))) return download(path, destination, true);
+    throw new ApiError("Guided audio couldn't be downloaded. Check your connection and try again.", 0);
+  }
+  if (destination.exists) destination.delete();
+  partial.moveSync(destination);
+  return destination;
+}
+
+/** Cached guided track for a meditation; older versions of the same meditation are removed. */
+async function meditationAudioFile(id: string, version: string): Promise<File> {
+  const dir = new Directory(Paths.cache, 'meditation-audio');
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  const file = new File(dir, `${id}-${version}.wav`);
+  for (const entry of dir.list()) {
+    if (entry instanceof File && entry.name.startsWith(`${id}-`) && entry.uri !== file.uri) entry.delete();
+  }
+  if (file.exists && file.size > 44) return file;
+  return download(`/meditations/${encodeURIComponent(id)}/audio`, file);
+}
+
 const get = <T>(p: string) => request<T>('GET', p);
 const post = <T>(p: string, b?: unknown) => request<T>('POST', p, b ?? {});
 const patch = <T>(p: string, b: unknown) => request<T>('PATCH', p, b);
@@ -174,6 +210,9 @@ export const api = {
   meditations: {
     list: () => get<Meditation[]>('/meditations'),
     get: (id: string) => get<Meditation>(`/meditations/${id}`),
+    /** Generates (server-side, once) the guided track and returns its cue timings. */
     audio: (id: string) => post<MeditationAudio>(`/meditations/${id}/audio`),
+    /** Downloads the continuous guided track to the cache and returns the local file. */
+    audioFile: (id: string, version: string) => meditationAudioFile(id, version),
   },
 };

@@ -104,21 +104,19 @@ export interface Meditation {
   steps: MeditationStep[];
 }
 
-export interface MeditationAudioSegment {
+export interface MeditationAudioCue {
+  /** Second in the guided track where this cue's voice starts. */
   at: number;
   durationSeconds: number;
-  mimeType: string;
-  audioBase64: string;
 }
 
+/** Metadata for the single continuous guided track (`GET /meditations/:id/audio`). */
 export interface MeditationAudio {
-  segments: MeditationAudioSegment[];
-  silence: {
-    mimeType: string;
-    fiveSecondBase64: string;
-    oneSecondBase64: string;
-    quarterSecondBase64: string;
-  };
+  /** Changes when the narration changes; used as the local cache key. */
+  version: string;
+  mimeType: string;
+  durationSeconds: number;
+  cues: MeditationAudioCue[];
 }
 
 export interface Today {

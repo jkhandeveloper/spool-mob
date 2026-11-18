@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { setAudioModeAsync, useAudioPlaylist, useAudioPlaylistStatus } from 'expo-audio';
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { useQuery } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
+import { MeditationScript } from '@/components/meditation-script';
 import { Button, ErrorState, Gap, Loading, Screen, T } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useScreenAwake } from '@/hooks/use-screen-awake';
@@ -12,62 +13,17 @@ import { api } from '@/lib/api';
 import { formatDuration } from '@/lib/format';
 import type { Meditation, MeditationAudio } from '@/lib/types';
 
-interface TimedTrack {
-  uri: string;
-  startsAt: number;
-  duration: number;
-  cueIndex: number;
-}
-
-const audioUri = (mimeType: string, audioBase64: string) =>
-  `data:${mimeType};base64,${audioBase64}`;
-
-/**
- * Builds one continuous playlist. Spoken cues start at their written cue times;
- * reusable silent WAV tracks fill the breathing/reflection time between them.
- */
-function buildTimedTracks(meditation: Meditation, audio: MeditationAudio): TimedTrack[] {
-  const tracks: TimedTrack[] = [];
-  const fiveSeconds = audioUri(audio.silence.mimeType, audio.silence.fiveSecondBase64);
-  const oneSecond = audioUri(audio.silence.mimeType, audio.silence.oneSecondBase64);
-  const quarterSecond = audioUri(audio.silence.mimeType, audio.silence.quarterSecondBase64);
-  let timeline = 0;
-
-  const addTrack = (uri: string, duration: number, cueIndex: number) => {
-    tracks.push({ uri, startsAt: timeline, duration, cueIndex });
-    timeline += duration;
-  };
-
-  const addSilenceUntil = (target: number, cueIndex: number) => {
-    let quarters = Math.max(0, Math.round((target - timeline) * 4));
-    while (quarters >= 20) {
-      addTrack(fiveSeconds, 5, cueIndex);
-      quarters -= 20;
-    }
-    while (quarters >= 4) {
-      addTrack(oneSecond, 1, cueIndex);
-      quarters -= 4;
-    }
-    while (quarters > 0) {
-      addTrack(quarterSecond, 0.25, cueIndex);
-      quarters -= 1;
-    }
-  };
-
-  audio.segments.forEach((segment, index) => {
-    addSilenceUntil(segment.at, Math.max(0, index - 1));
-    addTrack(
-      audioUri(segment.mimeType, segment.audioBase64),
-      segment.durationSeconds,
-      Math.min(index, meditation.steps.length - 1),
-    );
+/** Index of the last cue whose start time has been reached. */
+function cueAt(cueStarts: number[], elapsed: number): number {
+  let index = 0;
+  cueStarts.forEach((at, i) => {
+    if (at <= elapsed) index = i;
   });
-
-  addSilenceUntil(meditation.durationSeconds, Math.max(0, meditation.steps.length - 1));
-  return tracks;
+  return index;
 }
 
-// P3 Meditation player: timed narration, synced written cues, progress and completion.
+// P3 Meditation player: one continuous narrated track (voice + silences mixed by
+// the API and played from a local file), synced written cues, progress and completion.
 export default function MeditationPlayer() {
   useScreenAwake();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -77,39 +33,33 @@ export default function MeditationPlayer() {
     queryFn: () => api.meditations.get(id),
     staleTime: Infinity,
   });
-  const playlist = useAudioPlaylist({ sources: [], loop: 'none', updateInterval: 250 });
-  const playlistStatus = useAudioPlaylistStatus(playlist);
-  const [tracks, setTracks] = useState<TimedTrack[]>([]);
+  const player = useAudioPlayer(null, { updateInterval: 100 });
+  const status = useAudioPlayerStatus(player);
+  const [audio, setAudio] = useState<MeditationAudio | null>(null);
   const [started, setStarted] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
-  const [audioLoaded, setAudioLoaded] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [fallbackPlaying, setFallbackPlaying] = useState(false);
   const [fallbackElapsed, setFallbackElapsed] = useState(0);
 
   const m = q.data;
-  const activeTrack = tracks[playlistStatus.currentIndex];
-  const playlistElapsed = activeTrack
-    ? activeTrack.startsAt + Math.min(playlistStatus.currentTime, activeTrack.duration)
-    : 0;
-  const trackTotal = tracks.length
-    ? tracks[tracks.length - 1].startsAt + tracks[tracks.length - 1].duration
-    : 0;
-  const total = Math.max(m?.durationSeconds ?? 0, Math.ceil(trackTotal));
+  const audioLoaded = audio !== null;
+  const total = Math.ceil(Math.max(m?.durationSeconds ?? 0, audio?.durationSeconds ?? 0));
   const elapsed = Math.min(
     total,
-    Math.floor(audioLoaded ? playlistElapsed : fallbackElapsed),
+    Math.floor(audioLoaded ? status.currentTime : fallbackElapsed),
   );
-  const playing = audioLoaded ? playlistStatus.playing : fallbackPlaying;
+  const playing = audioLoaded ? status.playing : fallbackPlaying;
   const done = completed || (started && total > 0 && elapsed >= total);
 
-  const fallbackCueIndex = useMemo(() => {
-    if (!m) return 0;
-    const index = [...m.steps].reverse().findIndex((step) => step.at <= elapsed);
-    return index < 0 ? 0 : m.steps.length - 1 - index;
-  }, [elapsed, m]);
-  const cueIndex = activeTrack?.cueIndex ?? fallbackCueIndex;
+  const cueStarts = useMemo(
+    () => audio?.cues.map((cue) => cue.at) ?? m?.steps.map((step) => step.at) ?? [],
+    [audio, m],
+  );
+  // Exact audio position drives the script, so it moves and stops with the voice.
+  const position = audioLoaded ? status.currentTime : elapsed;
+  const cueIndex = cueAt(cueStarts, position);
 
   useEffect(() => {
     void setAudioModeAsync({
@@ -118,10 +68,10 @@ export default function MeditationPlayer() {
       interruptionMode: 'doNotMix',
     });
     return () => {
-      playlist.pause();
-      playlist.setActiveForLockScreen(false);
+      player.pause();
+      player.setActiveForLockScreen(false);
     };
-  }, [playlist]);
+  }, [player]);
 
   useEffect(() => {
     if (!fallbackPlaying || audioLoaded || !total) return;
@@ -139,39 +89,31 @@ export default function MeditationPlayer() {
   }, [audioLoaded, fallbackPlaying, total]);
 
   useEffect(() => {
-    const subscription = playlist.addListener('playlistStatusUpdate', (status) => {
-      const onLastTrack = tracks.length > 0 && status.currentIndex === tracks.length - 1;
-      if (audioLoaded && onLastTrack && status.didJustFinish) {
+    const subscription = player.addListener('playbackStatusUpdate', (update) => {
+      if (audioLoaded && update.didJustFinish) {
         setCompleted(true);
-        playlist.setActiveForLockScreen(false);
+        player.setActiveForLockScreen(false);
       }
     });
     return () => subscription.remove();
-  }, [audioLoaded, playlist, tracks.length]);
+  }, [audioLoaded, player]);
 
-  const startPlaylist = async (meditation: Meditation, timedTracks: TimedTrack[]) => {
-    playlist.clear();
-    timedTracks.forEach((track) => playlist.add({ uri: track.uri }));
-    playlist.skipTo(0);
-    await playlist.seekTo(0);
-    playlist.setActiveForLockScreen(
-      true,
-      {
-        title: meditation.title,
-        artist: 'Spool',
-        albumTitle: 'Guided meditation',
-      },
-      { isLiveStream: true },
-    );
-    playlist.play();
+  const playFromStart = async (meditation: Meditation) => {
+    await player.seekTo(0);
+    player.setActiveForLockScreen(true, {
+      title: meditation.title,
+      artist: 'Spool',
+      albumTitle: 'Guided meditation',
+    });
+    player.play();
   };
 
   const togglePlayback = async () => {
     if (audioLoading || !m) return;
 
     if (audioLoaded) {
-      if (playlistStatus.playing) playlist.pause();
-      else playlist.play();
+      if (status.playing) player.pause();
+      else player.play();
       return;
     }
 
@@ -184,18 +126,17 @@ export default function MeditationPlayer() {
     setAudioLoading(true);
     setAudioError(null);
     try {
-      const audio = await api.meditations.audio(id);
-      const timedTracks = buildTimedTracks(m, audio);
-      if (!timedTracks.length) throw new Error('Guided audio is empty.');
-      setTracks(timedTracks);
+      const info = await api.meditations.audio(id);
+      if (!info.cues.length) throw new Error('Guided audio is empty.');
+      // Play the whole session from one local file so nothing buffers mid-way.
+      const file = await api.meditations.audioFile(id, info.version);
+      player.replace({ uri: file.uri });
+      setAudio(info);
       setStarted(true);
       setCompleted(false);
-      await startPlaylist(m, timedTracks);
-      setAudioLoaded(true);
+      await playFromStart(m);
     } catch (error) {
-      playlist.clear();
-      setTracks([]);
-      setAudioLoaded(false);
+      setAudio(null);
       setAudioError(error instanceof Error ? error.message : 'Guided audio is unavailable.');
       setStarted(true);
       setFallbackPlaying(true);
@@ -207,19 +148,8 @@ export default function MeditationPlayer() {
   const startAgain = async () => {
     setCompleted(false);
     setStarted(true);
-    if (audioLoaded && m && tracks.length) {
-      playlist.skipTo(0);
-      await playlist.seekTo(0);
-      playlist.setActiveForLockScreen(
-        true,
-        {
-          title: m.title,
-          artist: 'Spool',
-          albumTitle: 'Guided meditation',
-        },
-        { isLiveStream: true },
-      );
-      playlist.play();
+    if (audioLoaded && m) {
+      await playFromStart(m);
     } else {
       setFallbackElapsed(0);
       setFallbackPlaying(true);
@@ -227,8 +157,8 @@ export default function MeditationPlayer() {
   };
 
   const close = () => {
-    playlist.pause();
-    playlist.setActiveForLockScreen(false);
+    player.pause();
+    player.setActiveForLockScreen(false);
     router.back();
   };
 
@@ -238,7 +168,6 @@ export default function MeditationPlayer() {
   }
   if (!m) return <Screen back={close}><Loading /></Screen>;
 
-  const cue = m.steps[cueIndex] ?? m.steps[0];
   const progress = total ? Math.min(1, elapsed / total) : 0;
 
   if (done) {
@@ -258,21 +187,22 @@ export default function MeditationPlayer() {
     <Screen back={close} scroll={false}>
       <T variant="title" center>{m.title}</T>
       <T center muted>{m.subtitle}</T>
-      <View style={{ flex: 1, justifyContent: 'center', paddingVertical: Spacing.xl }}>
-        {started ? (
-          <T variant="caption" muted center style={{ marginBottom: Spacing.sm }}>
-            Cue {cueIndex + 1} of {m.steps.length}
-          </T>
-        ) : null}
-        <T variant="heading" center accessibilityLiveRegion="polite" style={{ fontWeight: '500' }}>
-          {started ? cue.text : 'Find a quiet spot. Press play when you are ready.'}
-        </T>
-        {audioLoading ? (
-          <T variant="caption" muted center style={{ marginTop: Spacing.md }}>
-            Preparing the complete guided audio…
-          </T>
-        ) : null}
-      </View>
+      <MeditationScript
+        steps={m.steps}
+        cues={audio?.cues ?? null}
+        position={position}
+        activeIndex={cueIndex}
+        started={started}
+      />
+      <T variant="caption" muted center style={{ marginVertical: Spacing.sm }}>
+        {audioLoading
+          ? 'Preparing the complete guided audio…'
+          : started && !playing
+            ? 'Paused'
+            : audioLoaded && status.isBuffering
+              ? 'Loading…'
+              : ' '}
+      </T>
       <View
         accessible
         accessibilityRole="progressbar"
@@ -290,7 +220,7 @@ export default function MeditationPlayer() {
           <T variant="caption" muted>{formatDuration(total)}</T>
         </View>
       </View>
-      <Gap size={Spacing.xl} />
+      <Gap size={Spacing.lg} />
       <View style={{ alignItems: 'center', paddingBottom: Spacing.xxl }}>
         <Pressable
           onPress={() => void togglePlayback()}
@@ -312,9 +242,6 @@ export default function MeditationPlayer() {
             {audioError} Using the synced written guide instead.
           </T>
         ) : null}
-        <T variant="caption" muted center style={{ marginTop: Spacing.sm }}>
-          Guided voice is AI-generated.
-        </T>
       </View>
     </Screen>
   );
