@@ -4,6 +4,7 @@ import { router, type Href } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { Card, ErrorState, Gap, ListRow, Loading, Screen, Section, Stack, T } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
+import { useDayPeriod } from '@/hooks/use-day-period';
 import { useTheme } from '@/hooks/use-theme';
 import { api } from '@/lib/api';
 import { appointmentSubtitle, formatAppointmentWhen } from '@/lib/format';
@@ -17,7 +18,9 @@ function pendingHref(s: TherapySession): Href {
 // 01 Today
 export default function TodayScreen() {
   const c = useTheme();
-  const q = useQuery({ queryKey: ['today'], queryFn: api.today });
+  // The suggested meditation follows the part of the day, so refetch when it changes.
+  const period = useDayPeriod();
+  const q = useQuery({ queryKey: ['today', period], queryFn: api.today });
 
   if (q.isPending) return <Screen><Loading /></Screen>;
   if (q.isError) return <Screen><ErrorState error={q.error} onRetry={() => q.refetch()} /></Screen>;

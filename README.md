@@ -65,7 +65,8 @@ The app icons and splash are generated from the supplied brand artwork by [scrip
 | `icon.png`, `ios-light.png`, `ios-dark.png`, `ios-tinted.png` | iOS app icon (light, dark and tinted appearances); the full-bleed square is masked by iOS |
 | `android-icon-foreground.png` + white background | Android adaptive icon (wordmark kept inside the safe zone) |
 | `android-icon-monochrome.png` | Android 13+ themed icon |
-| `splash-icon.png` / `splash-icon-dark.png` | Branded white splash with wordmark, tagline and thread flourish |
+| `splash-icon.png` / `splash-icon-dark.png` | iOS branded white splash with wordmark, tagline and thread flourish |
+| `splash-android.png` | Android splash: the same artwork, square, fitted inside the circle Android 12+ masks the splash icon to (so nothing is clipped) |
 | `spool-mark.png` | In-app `Logo` component in [src/components/ui.tsx](src/components/ui.tsx) (Welcome screen) |
 
 To regenerate after changing the logo:

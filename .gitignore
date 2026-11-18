@@ -47,3 +47,6 @@ example
 
 # local Claude Code settings
 .claude/settings.local.json
+
+# Local Claude Code guidance (not shipped)
+CLAUDE.md

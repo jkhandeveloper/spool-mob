@@ -42,6 +42,14 @@
           "dark": {
             "backgroundColor": "#FFFFFF",
             "image": "./assets/images/splash-icon-dark.png"
+          },
+          "android": {
+            "image": "./assets/images/splash-android.png",
+            "imageWidth": 288,
+            "dark": {
+              "backgroundColor": "#FFFFFF",
+              "image": "./assets/images/splash-android.png"
+            }
           }
         }
       ],

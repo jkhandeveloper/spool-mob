@@ -96,11 +96,16 @@ export interface MeditationStep {
   text: string;
 }
 
+export type DayPeriod = 'morning' | 'afternoon' | 'night';
+
 export interface Meditation {
   id: string;
   title: string;
   subtitle: string;
   durationSeconds: number;
+  timeOfDay: DayPeriod | 'any';
+  /** Part of the "All day" series: the one matching the current part of the day is shown. */
+  allDay: boolean;
   steps: MeditationStep[];
 }
 

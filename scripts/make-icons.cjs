@@ -85,6 +85,32 @@ async function main() {
   await sharp(splash).toFile(out('splash-icon.png'));
   await sharp(splash).toFile(out('splash-icon-dark.png'));
 
+  // Android 12+ draws the splash icon in a square and masks it to the centred
+  // circle two thirds as wide, which clipped the wide wordmark and tagline.
+  // Fit the whole artwork (by its diagonal) inside that circle instead.
+  const ANDROID_SPLASH = 1152;
+  const { data: art, info: artInfo } = await sharp(SPLASH_SRC)
+    .rotate()
+    .trim({ background: '#ffffff', threshold: 12 })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  const safeDiameter = (ANDROID_SPLASH * 2) / 3 - 24;
+  const scale = safeDiameter / Math.hypot(artInfo.width, artInfo.height);
+  const artWidth = Math.floor(artInfo.width * scale);
+  const artHeight = Math.floor(artInfo.height * scale);
+  const androidSplash = await sharp(art)
+    .resize(artWidth, artHeight)
+    .extend({
+      top: Math.floor((ANDROID_SPLASH - artHeight) / 2),
+      bottom: Math.ceil((ANDROID_SPLASH - artHeight) / 2),
+      left: Math.floor((ANDROID_SPLASH - artWidth) / 2),
+      right: Math.ceil((ANDROID_SPLASH - artWidth) / 2),
+      background: '#ffffff',
+    })
+    .png()
+    .toBuffer();
+  await sharp(androidSplash).toFile(out('splash-android.png'));
+
   if (PREVIEW) {
     fs.mkdirSync(PREVIEW, { recursive: true });
     await sharp(logo).resize(420, 420).toFile(path.join(PREVIEW, 'app-logo.png'));
