@@ -35,8 +35,8 @@ export default function MoreScreen() {
           <ListRow icon="leaf-outline" title="Meditations" onPress={() => router.push('/meditations')} />
           <ListRow
             icon="school-outline"
-            title={user?.graduatedAt ? 'Graduated' : "I've graduated"}
-            subtitle={user?.graduatedAt ? 'Your journal and summaries stay with you' : 'Finished therapy? Celebrate it'}
+            title={user?.graduatedAt ? 'Classes completed' : 'Complete classes'}
+            subtitle={user?.graduatedAt ? 'Your journal and summaries stay with you' : 'Finished your classes? Mark the milestone'}
             onPress={() => router.push('/graduation')}
           />
         </Stack>

@@ -126,7 +126,7 @@ export default function TodayScreen() {
         <>
           <Gap size={Spacing.xl} />
           <Card muted>
-            <T variant="bodyStrong">You've graduated 🎓</T>
+            <T variant="bodyStrong">Classes completed 🎓</T>
             <T variant="caption" muted>Your journal, summaries and goals are still here whenever you need them.</T>
           </Card>
         </>

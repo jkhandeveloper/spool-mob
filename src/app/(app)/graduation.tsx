@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { cancelAllReminders, syncDailyReminder } from '@/lib/notifications';
 
-// P8 Graduation: celebrate, adjust reminders, explain ongoing access
+// P8 Classes completion: celebrate, adjust reminders, explain ongoing access
 export default function Graduation() {
   const c = useTheme();
   const qc = useQueryClient();
@@ -56,21 +56,21 @@ export default function Graduation() {
       </View>
       {!graduated ? (
         <>
-          <T variant="title" center>Ready to graduate?</T>
+          <T variant="title" center>Ready to complete your classes?</T>
           <Gap />
           <T center muted>
-            Finishing therapy is a real milestone. When you graduate, upcoming appointments are cleared, but everything
-            you've written and saved stays with you.
+            Finishing your classes is a real milestone. When you mark them complete, upcoming appointments are cleared,
+            but everything you've written and saved stays with you.
           </T>
           <Gap size={Spacing.xl} />
           <InlineError message={graduate.error?.message} />
           <Gap size={8} />
-          <Button title="I've graduated!" onPress={() => graduate.mutate()} loading={graduate.isPending} />
+          <Button title="My classes are complete" onPress={() => graduate.mutate()} loading={graduate.isPending} />
           <Button title="Not yet" variant="ghost" onPress={() => router.back()} />
         </>
       ) : (
         <>
-          <T variant="title" center>{justGraduated ? 'Congratulations 🎉' : "You've graduated"}</T>
+          <T variant="title" center>{justGraduated ? 'Congratulations 🎉' : 'Classes completed'}</T>
           <Gap />
           <T center muted>
             You did the work. Spool is still here for the loose threads: your journal, past summaries, goals and
@@ -89,7 +89,7 @@ export default function Graduation() {
           <Stack>
             <Button title="Keep daily reminders" onPress={() => keepReminders.mutate(true)} loading={keepReminders.isPending} />
             <Button title="Turn reminders off" variant="secondary" onPress={() => keepReminders.mutate(false)} disabled={keepReminders.isPending} />
-            <Button title="I'm returning to therapy" variant="ghost" onPress={() => resume.mutate()} loading={resume.isPending} />
+            <Button title="I'm starting classes again" variant="ghost" onPress={() => resume.mutate()} loading={resume.isPending} />
           </Stack>
         </>
       )}

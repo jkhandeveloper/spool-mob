@@ -16,7 +16,6 @@ import {
   type TextInputProps,
   type TextStyle,
   type ViewStyle,
-  useColorScheme,
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -105,13 +104,10 @@ export function Wordmark({ onBack }: { onBack?: () => void }) {
 const SPOOL_MARK = require('@/assets/images/spool-mark.png');
 
 /**
- * The Spool logo: the thread-and-spool line art on a rounded tile.
- * Light mode shows the brand tile (white on black); dark mode keeps the
- * white thread on a dark tile so it doesn't glare.
+ * The supplied Spool wordmark and spool artwork on its white rounded tile.
  */
 export function Logo({ size = 96 }: { size?: number }) {
   const c = useTheme();
-  const dark = useColorScheme() === 'dark';
   return (
     <View
       accessibilityRole="image"
@@ -121,11 +117,11 @@ export function Logo({ size = 96 }: { size?: number }) {
         height: size,
         borderRadius: size * 0.225,
         overflow: 'hidden',
-        backgroundColor: dark ? c.surface : '#000000',
-        borderWidth: dark ? StyleSheet.hairlineWidth : 0,
+        backgroundColor: '#FFFFFF',
+        borderWidth: StyleSheet.hairlineWidth,
         borderColor: c.border,
       }}>
-      <Image source={SPOOL_MARK} style={{ width: size, height: size }} tintColor="#FFFFFF" contentFit="contain" />
+      <Image source={SPOOL_MARK} style={{ width: size, height: size }} contentFit="contain" />
     </View>
   );
 }

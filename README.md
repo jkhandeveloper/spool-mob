@@ -55,21 +55,24 @@ cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/re
 
 ## Brand assets
 
-The icons and splash are generated from the source logo (`assets/images/logo-source.jpg`, white thread on a black tile) by [scripts/make-icons.cjs](scripts/make-icons.cjs):
+The app icons and splash are generated from the supplied brand artwork by [scripts/make-icons.cjs](scripts/make-icons.cjs):
+
+- `assets/images/logo-source.jpg` — square Spool wordmark used for app and in-app icons.
+- `assets/images/splash-source.jpg` — Spool wordmark, tagline and thread flourish used on launch.
 
 | Asset | Used for |
 |---|---|
 | `icon.png`, `ios-light.png`, `ios-dark.png`, `ios-tinted.png` | iOS app icon (light, dark and tinted appearances); the full-bleed square is masked by iOS |
-| `android-icon-foreground.png` + black background | Android adaptive icon (thread kept inside the safe zone) |
+| `android-icon-foreground.png` + white background | Android adaptive icon (wordmark kept inside the safe zone) |
 | `android-icon-monochrome.png` | Android 13+ themed icon |
-| `splash-icon.png` / `splash-icon-dark.png` | Splash: black tile on white (light mode), white thread on near-black (dark mode) |
+| `splash-icon.png` / `splash-icon-dark.png` | Branded white splash with wordmark, tagline and thread flourish |
 | `spool-mark.png` | In-app `Logo` component in [src/components/ui.tsx](src/components/ui.tsx) (Welcome screen) |
 
 To regenerate after changing the logo:
 
 ```bash
 npm install --no-save sharp
-node scripts/make-icons.cjs assets/images/logo-source.jpg assets/images /tmp
+node scripts/make-icons.cjs assets/images/logo-source.jpg assets/images/splash-source.jpg assets/images /tmp/spool-brand-preview
 npx expo prebuild --clean --no-install   # or let CI/EAS do it
 ```
 
