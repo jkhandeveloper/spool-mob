@@ -16,7 +16,7 @@ env:
 
 jobs:
   check:
-    name: Typecheck, lint, bundle
+    name: Typecheck, tests, lint, bundle
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,8 @@ jobs:
       - name: Generate typed routes
         run: npx expo customize tsconfig.json
       - run: npm run typecheck
-      - run: npx eslint src
+      - run: npm test
+      - run: npm run lint
       - name: Bundle for all platforms
         run: npx expo export --output-dir dist
 

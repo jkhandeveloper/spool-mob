@@ -25,6 +25,7 @@ export default function SignIn() {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           autoComplete="email"
           keyboardType="email-address"
           textContentType="emailAddress"

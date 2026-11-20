@@ -80,7 +80,9 @@
           "recordAudioAndroid": false,
           "enableBackgroundPlayback": true
         }
-      ]
+      ],
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

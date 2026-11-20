@@ -191,6 +191,16 @@ src/lib/          API client + token refresh, auth context, notifications, forma
 
 Tokens: the refresh token lives in SecureStore (Keychain/Keystore), and the access token only in memory. Local notifications cover the daily check-in and appointment reminders.
 
+Unsigned iOS simulator previews can report a missing Keychain entitlement. Only
+for that error on a simulator, Spool keeps the refresh token in memory. Sign-in,
+sign-up, token refresh and sign-out work for that run; restarting the app requires
+signing in again. Physical devices continue to require Keychain/Keystore. Rebuild
+and upload the simulator ZIP after changing the app; an existing Appetize upload
+does not receive local source changes. If an earlier signup displayed this error,
+the account may already exist: use **Sign in** with the same credentials.
+
+Run `npm test` for the storage/session regression checks, alongside lint and typecheck.
+
 ## Known gaps
 
 - Password reset emails depend on the API getting a mail provider. In development, the API returns the reset code directly and the app uses it.

@@ -12,6 +12,10 @@ const pending = new Map<string, PendingUpload>();
 const prompts = new Map<string, string[]>();
 
 export const sessionStore = {
+  clearAll: () => {
+    pending.clear();
+    prompts.clear();
+  },
   setPrompts: (id: string, p: string[]) => prompts.set(id, p),
   getPrompts: (id: string) => prompts.get(id) ?? [],
   stash: (id: string, upload: PendingUpload) => pending.set(id, upload),

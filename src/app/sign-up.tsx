@@ -33,6 +33,7 @@ export default function SignUp() {
           value={name}
           onChangeText={setName}
           autoComplete="given-name"
+          maxLength={80}
           textContentType="givenName"
         />
         <Field
@@ -41,6 +42,8 @@ export default function SignUp() {
           onChangeText={setEmail}
           error={emailError}
           autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={320}
           autoComplete="email"
           keyboardType="email-address"
           textContentType="emailAddress"
@@ -52,6 +55,7 @@ export default function SignUp() {
           error={passwordError}
           hint="At least 8 characters"
           secureTextEntry
+          maxLength={128}
           autoComplete="new-password"
           textContentType="newPassword"
           onSubmitEditing={() => action.run()}

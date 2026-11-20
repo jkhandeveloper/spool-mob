@@ -30,36 +30,62 @@ export class ApiError extends Error {
 let accessToken: string | null = null;
 let refreshing: Promise<boolean> | null = null;
 let onSignedOut: (() => void) | null = null;
+let sessionVersion = 0;
+let tokenWrite: Promise<void> = Promise.resolve();
 
 /** Called by the auth provider so an expired session returns the user to Welcome. */
 export function setSignedOutHandler(handler: (() => void) | null) {
   onSignedOut = handler;
 }
 
+async function persistTokens(tokens: TokenPair | null, version: number) {
+  // Keep a slow write from restoring credentials after a later sign-out.
+  const write = tokenWrite.catch(() => undefined).then(async () => {
+    if (version !== sessionVersion) return;
+    if (tokens) await tokenStore.set(tokens.refreshToken);
+    else await tokenStore.clear();
+    if (version === sessionVersion) accessToken = tokens?.accessToken ?? null;
+  });
+  tokenWrite = write;
+  await write;
+}
+
 export async function setTokens(tokens: TokenPair | null) {
-  accessToken = tokens?.accessToken ?? null;
-  if (tokens) await tokenStore.set(tokens.refreshToken);
-  else await tokenStore.clear();
+  const version = ++sessionVersion;
+  accessToken = null;
+  await persistTokens(tokens, version);
 }
 
 /** Exchanges the stored refresh token for new tokens. Concurrent callers share one request. */
 export function refreshTokens(): Promise<boolean> {
+  const version = sessionVersion;
   refreshing ??= (async () => {
     try {
+      await tokenWrite;
       const refreshToken = await tokenStore.get();
+      if (version !== sessionVersion) return false;
       if (!refreshToken) return false;
       const res = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
+      }).catch(() => {
+        throw new ApiError("You're offline or Spool can't be reached. Check your connection and try again.", 0);
       });
+      if (version !== sessionVersion) return false;
       if (res.status === 401) {
-        await setTokens(null);
+        try {
+          await setTokens(null);
+        } finally {
+          if (sessionVersion === version + 1) onSignedOut?.();
+        }
         return false;
       }
       if (!res.ok) throw new ApiError('Could not refresh session', res.status);
-      await setTokens((await res.json()) as TokenPair);
-      return true;
+      const tokens = (await res.json()) as TokenPair;
+      if (version !== sessionVersion) return false;
+      await persistTokens(tokens, version);
+      return sessionVersion === version && accessToken !== null;
     } finally {
       refreshing = null;
     }
@@ -78,6 +104,7 @@ function messageFrom(body: unknown, status: number): string {
 }
 
 async function request<T>(method: string, path: string, body?: unknown, retried = false): Promise<T> {
+  const version = sessionVersion;
   let res: Response;
   try {
     res = await fetch(`${API_URL}${path}`, {
@@ -93,9 +120,11 @@ async function request<T>(method: string, path: string, body?: unknown, retried 
     throw new ApiError("You're offline or Spool can't be reached. Check your connection and try again.", 0);
   }
 
-  if (res.status === 401 && !retried && !path.startsWith('/auth/')) {
-    if (await refreshTokens().catch(() => false)) return request<T>(method, path, body, true);
-    onSignedOut?.();
+  if (res.status === 401 && !path.startsWith('/auth/')) {
+    if (version !== sessionVersion) throw new ApiError('Your session changed. Please try again.', 401);
+    // A network/server failure during refresh must not erase a valid session.
+    if (!retried && await refreshTokens()) return request<T>(method, path, body, true);
+    if (version === sessionVersion) onSignedOut?.();
   }
 
   if (res.status === 204) return undefined as T;

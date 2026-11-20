@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, refreshTokens, setSignedOutHandler, setTokens } from './api';
 import { cancelAllReminders, syncDailyReminder } from './notifications';
+import { sessionStore } from './session-store';
 import type { User } from './types';
 
 type Status = 'loading' | 'signedOut' | 'signedIn';
@@ -26,11 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
 
   const clearSession = useCallback(async () => {
-    await setTokens(null);
-    await cancelAllReminders().catch(() => undefined);
+    // Clear private UI state even if native credential deletion fails.
+    const clearingTokens = setTokens(null);
     queryClient.clear();
+    sessionStore.clearAll();
     setUserState(null);
     setStatus('signedOut');
+    await Promise.all([clearingTokens, cancelAllReminders().catch(() => undefined)]);
   }, [queryClient]);
 
   const setUser = useCallback((next: User) => {
@@ -46,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore a previous session from the stored refresh token.
   useEffect(() => {
-    setSignedOutHandler(() => void clearSession());
+    setSignedOutHandler(() => void clearSession().catch(() => undefined));
     (async () => {
       try {
         if (await refreshTokens()) await loadUser();
@@ -70,10 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await loadUser();
       },
       async signUp(email, password, displayName) {
-        await setTokens(
-          await api.auth.register({ email: email.trim(), password, displayName: displayName?.trim() || undefined }),
-        );
-        await loadUser();
+        const tokens = await api.auth.register({ email: email.trim(), password, displayName: displayName?.trim() || undefined });
+        try {
+          await setTokens(tokens);
+          await loadUser();
+        } catch {
+          throw new Error('Your account was created, but sign-in could not finish. Please use Sign in with the same email and password.');
+        }
       },
       async signOut() {
         await api.auth.logout().catch(() => undefined);
