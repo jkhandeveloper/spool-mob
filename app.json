@@ -14,7 +14,11 @@
         "tinted": "./assets/images/ios-tinted.png"
       },
       "bundleIdentifier": "com.spool.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Spool turns your session into text on this phone so it can create a summary for you to review.",
+        "NSMicrophoneUsageDescription": "Spool uses the microphone during sessions you choose to record. Speech is transcribed on your phone and audio is never saved."
+      }
     },
     "android": {
       "package": "com.spool.app",
@@ -24,7 +28,13 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "output": "single",
@@ -75,6 +85,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "6181a9b0-234d-4183-adf4-106f725bbfe1"
+      }
+    },
+    "owner": "rayyantariq"
   }
 }

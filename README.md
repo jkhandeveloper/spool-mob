@@ -53,6 +53,69 @@ EXPO_PUBLIC_API_URL=https://api.spool.zasstech.com/api/v1 npx expo prebuild --pl
 cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/app-release.apk
 ```
 
+## Test native iOS from Windows
+
+Use a remote iOS Simulator through Expo, controlled in your Windows browser. This
+runs a native simulator build of Spool. The `*-unsigned.ipa` from CI targets
+physical iPhones and cannot be installed in a simulator. Testing that exact IPA
+requires signing and installing it on an iPhone.
+
+Prerequisites: Node.js/npm, an Expo account with Expo Simulators access (currently
+a paid-plan feature), and this project linked to that account. From PowerShell in
+`spool-mob`, complete the one-time setup:
+
+```powershell
+npx.cmd eas-cli@latest login
+npx.cmd eas-cli@latest init
+```
+
+`init` creates or links the Expo project and adds its project ID to app config.
+Then build the standalone simulator app (no Apple signing account or local Mac
+needed):
+
+```powershell
+npm.cmd run ios:simulator:build
+```
+
+Wait for the cloud build to finish and copy its build ID. Start the simulator:
+
+```powershell
+npm.cmd run ios:simulator:start -- --build-id YOUR-BUILD-ID
+```
+
+Replace `YOUR-BUILD-ID` with the UUID printed by Expo. The launcher checks account
+availability before starting a device, then prints a browser preview link. Open
+it and sign into Expo to interact with Spool. Sessions stop after 30 minutes or
+10 idle minutes. To inspect or stop your session sooner:
+
+```powershell
+npm.cmd run ios:simulator:status
+npm.cmd run ios:simulator:stop
+```
+
+The `ios-simulator` profile in `eas.json` uses the same hosted API as CI. Use a test
+account; data entered in this build goes to that API. Override the profile's
+`EXPO_PUBLIC_API_URL` for a staging API reachable from the remote device. Rebuild
+after source or configuration changes. Session credentials in `.env.eas-simulator`
+are ignored by Git.
+
+### Appetize.io
+
+Do not upload the `*-unsigned.ipa` artifact to Appetize. That file is a device
+build. Appetize needs the simulator `.app` bundle, compressed as a `.zip`. On a
+push to `main`, the CI workflow produces an artifact named
+`spool-<version>-<sha>-simulator.zip`; download that artifact from the
+`iOS Simulator build (Appetize)` job and upload the ZIP to Appetize. The archive
+must contain `Spool.app` at its root, which the workflow does automatically.
+
+Check welcome/sign-in, journal entries, appointments, session consent, typed notes,
+and summary review. Verify microphone transcription, notifications, signing, and
+other hardware-dependent behavior separately on a real iPhone. A simulator run
+does not prove the device IPA will install or behave identically.
+
+For a quick browser-only preview of shared screens, run `npm.cmd run web`; it does
+not test native iOS behavior. Reference: [Expo's Windows simulator workflow](https://docs.expo.dev/eas/simulators/how-to/work-without-a-mac/).
+
 ## Brand assets
 
 The app icons and splash are generated from the supplied brand artwork by [scripts/make-icons.cjs](scripts/make-icons.cjs):

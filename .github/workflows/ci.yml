@@ -111,3 +111,46 @@ jobs:
           name: ${{ steps.ipa.outputs.name }}
           path: ${{ steps.ipa.outputs.name }}
           retention-days: 30
+
+  ios-simulator:
+    name: iOS Simulator build (Appetize)
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - run: npm ci
+      - name: Generate native iOS project (runs pod install)
+        run: npx expo prebuild --platform ios --clean
+      - name: Build simulator app
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace ios/Spool.xcworkspace \
+            -scheme Spool \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-simulator \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -n 200
+      - name: Package Appetize archive
+        id: simulator
+        run: |
+          name="spool-$(node -p "require('./app.json').expo.version")-${GITHUB_SHA::7}-simulator.zip"
+          cd build-simulator/Build/Products/Release-iphonesimulator
+          zip -qry "$GITHUB_WORKSPACE/$name" Spool.app
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.simulator.outputs.name }}
+          path: ${{ steps.simulator.outputs.name }}
+          retention-days: 30
