@@ -41,7 +41,9 @@ export default function NewSession() {
       sessionStore.setPrompts(session.id, session.prompts);
       // Push the nested screen explicitly. Replacing from the tab navigator can
       // resolve back to the protected app root on some native builds.
-      router.push({ pathname: '/session/live', params: { id: session.id } });
+      // Include the protected route group so navigation is handled by the
+      // parent app stack instead of the currently selected tab.
+      router.push({ pathname: '/(app)/session/live', params: { id: session.id } });
     },
   });
 
