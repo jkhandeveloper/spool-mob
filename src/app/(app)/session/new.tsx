@@ -35,8 +35,13 @@ export default function NewSession() {
   const start = useMutation({
     mutationFn: () => api.sessions.create(selected),
     onSuccess: (session) => {
+      if (!session?.id) {
+        throw new Error('The session could not be started. Please try again.');
+      }
       sessionStore.setPrompts(session.id, session.prompts);
-      router.replace({ pathname: '/session/live', params: { id: session.id } });
+      // Push the nested screen explicitly. Replacing from the tab navigator can
+      // resolve back to the protected app root on some native builds.
+      router.push({ pathname: '/session/live', params: { id: session.id } });
     },
   });
 

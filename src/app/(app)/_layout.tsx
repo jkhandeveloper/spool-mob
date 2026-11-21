@@ -6,6 +6,7 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false, animation: user?.reduceMotion ? 'none' : 'default' }}>
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="session/new" />
       <Stack.Screen name="session/live" options={{ gestureEnabled: false }} />
       <Stack.Screen name="session/[id]/processing" options={{ gestureEnabled: false }} />
       <Stack.Screen name="meditation/[id]" options={{ presentation: 'fullScreenModal' }} />
