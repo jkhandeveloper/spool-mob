@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Platform } from 'react-native';
 import { Button, Checkbox, Gap, InlineError, Screen, T } from '@/components/ui';
 import { PrivacyDetails } from '@/components/privacy-details';
 import { Spacing } from '@/constants/theme';
@@ -10,6 +11,7 @@ import { useAuth } from '@/lib/auth';
 export default function PrivacySetup() {
   const { setUser, signOut } = useAuth();
   const [reviewed, setReviewed] = useState(false);
+  const canRecord = Platform.OS === 'ios';
 
   const action = useAction(async (journalOnly: boolean) => {
     if (!reviewed) throw new Error('Please review the privacy information and tick the box to continue.');
@@ -22,13 +24,19 @@ export default function PrivacySetup() {
       footer={
         <>
           <InlineError message={action.error} />
-          <Button title="Continue" onPress={() => action.run(false)} loading={action.pending} disabled={!reviewed} />
-          <Button
-            title="Use journals without recording"
-            variant="ghost"
-            onPress={() => action.run(true)}
-            disabled={action.pending}
-          />
+          {canRecord ? (
+            <>
+              <Button title="Continue" onPress={() => action.run(false)} loading={action.pending} disabled={!reviewed} />
+              <Button
+                title="Use journals without recording"
+                variant="ghost"
+                onPress={() => action.run(true)}
+                disabled={action.pending}
+              />
+            </>
+          ) : (
+            <Button title="Continue with journals" onPress={() => action.run(true)} loading={action.pending} disabled={!reviewed} />
+          )}
         </>
       }>
       <T variant="title">Before you begin</T>

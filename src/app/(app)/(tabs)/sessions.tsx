@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
 import { Button, Card, EmptyState, ErrorState, Gap, ListRow, Loading, Screen, Section, Stack, T } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -12,7 +13,8 @@ export default function SessionsScreen() {
   const pending = useQuery({ queryKey: ['sessions', 'pending'], queryFn: api.sessions.pending });
 
   const journalOnly = !!user?.journalOnly;
-  const footer = journalOnly ? undefined : (
+  const canRecord = Platform.OS === 'ios';
+  const footer = journalOnly || !canRecord ? undefined : (
     <Button title="Start a new session" icon="mic-outline" onPress={() => router.push('/session/new')} />
   );
 
@@ -33,6 +35,16 @@ export default function SessionsScreen() {
           <Card muted>
             <T variant="bodyStrong">Session recording is off</T>
             <T variant="caption" muted>You chose to use journals without recording. You can turn recording on in More → Privacy & data.</T>
+          </Card>
+          <Gap />
+        </>
+      ) : null}
+
+      {!journalOnly && !canRecord ? (
+        <>
+          <Card muted>
+            <T variant="bodyStrong">Session recording is available on iPhone only</T>
+            <T variant="caption" muted>Use the journal on Android. Voice session recording is available on iOS.</T>
           </Card>
           <Gap />
         </>

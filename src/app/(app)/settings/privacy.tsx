@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 import { PrivacyDetails } from '@/components/privacy-details';
 import { Button, Card, Gap, InlineError, Screen, Section, Stack, T, ToggleRow } from '@/components/ui';
 import { useUpdateMe } from '@/hooks/use-update-me';
@@ -13,6 +13,7 @@ export default function PrivacySettings() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const update = useUpdateMe();
+  const canRecord = Platform.OS === 'ios';
 
   const exportData = useMutation({
     mutationFn: api.me.export,
@@ -42,12 +43,19 @@ export default function PrivacySettings() {
       <T variant="title">Privacy & data</T>
       <Gap />
       <Card muted>
-        <ToggleRow
-          label="Session recording"
-          hint={user?.journalOnly ? 'Off: you are using journals without recording.' : 'On: you can start a session from the Session tab.'}
-          value={!user?.journalOnly}
-          onChange={(on) => update.mutate({ journalOnly: !on })}
-        />
+        {canRecord ? (
+          <ToggleRow
+            label="Session recording"
+            hint={user?.journalOnly ? 'Off: you are using journals without recording.' : 'On: you can start a session from the Session tab.'}
+            value={!user?.journalOnly}
+            onChange={(on) => update.mutate({ journalOnly: !on })}
+          />
+        ) : (
+          <>
+            <T variant="bodyStrong">Session recording is available on iPhone only</T>
+            <T variant="caption" muted>Android supports journals. Voice session recording is available on iOS.</T>
+          </>
+        )}
       </Card>
       <InlineError message={update.error?.message} />
 
