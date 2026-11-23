@@ -76,7 +76,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": false,
+          "microphonePermission": "Spool uses the microphone during sessions you choose to record. Speech is transcribed on your phone and audio is never saved.",
           "recordAudioAndroid": false,
           "enableBackgroundPlayback": true
         }
