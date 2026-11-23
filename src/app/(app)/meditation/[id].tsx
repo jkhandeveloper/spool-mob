@@ -98,8 +98,13 @@ export default function MeditationPlayer() {
     return () => subscription.remove();
   }, [audioLoaded, player]);
 
-  const playFromStart = async (meditation: Meditation) => {
-    await player.seekTo(0);
+  /**
+   * Starts the loaded track. `rewind` is only for a track that has already played:
+   * on iOS, seeking an item that is still loading (right after `replace`) raises an
+   * uncaught AVFoundation exception and crashes the app, and a new item starts at 0.
+   */
+  const playFromStart = async (meditation: Meditation, rewind: boolean) => {
+    if (rewind) await player.seekTo(0);
     player.setActiveForLockScreen(true, {
       title: meditation.title,
       artist: 'Spool',
@@ -134,7 +139,7 @@ export default function MeditationPlayer() {
       setAudio(info);
       setStarted(true);
       setCompleted(false);
-      await playFromStart(m);
+      await playFromStart(m, false);
     } catch (error) {
       setAudio(null);
       setAudioError(error instanceof Error ? error.message : 'Guided audio is unavailable.');
@@ -149,7 +154,7 @@ export default function MeditationPlayer() {
     setCompleted(false);
     setStarted(true);
     if (audioLoaded && m) {
-      await playFromStart(m);
+      await playFromStart(m, status.isLoaded);
     } else {
       setFallbackElapsed(0);
       setFallbackPlaying(true);
