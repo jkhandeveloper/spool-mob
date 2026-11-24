@@ -24,7 +24,7 @@
       }
     },
     "android": {
-      "package": "com.spool.app",
+      "package": "net.spoolapp.spool",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -48,6 +48,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/with-android-release.cjs",
       [
         "expo-splash-screen",
         {
