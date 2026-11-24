@@ -15,7 +15,7 @@ export const PRIVACY_SECTIONS = [
     body: [
       'Recording only starts when you tap Start session, after everyone present has agreed.',
       'Speech is turned into text on your phone. Audio is never uploaded or saved.',
-      'When the session ends, the text transcript is sent securely to Spool to create a summary draft. Summaries are written by an AI model (Claude, by Anthropic), which receives the transcript and your discussion prompts.',
+      'When the session ends, the text transcript is sent securely to Spool to create a summary draft. Summaries are written by an AI model from OpenAI, which receives the transcript and your discussion prompts. OpenAI is asked not to store them.',
       'The transcript is deleted as soon as the summary draft is created. If creating the summary fails, it is kept only so you can try again, and it is deleted when you discard the session.',
     ],
   },

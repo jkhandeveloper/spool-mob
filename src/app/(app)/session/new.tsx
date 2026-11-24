@@ -9,7 +9,7 @@ import { sessionStore } from '@/lib/session-store';
 
 const CONSENT_SCRIPT = [
   '“I’d like to record this session to help me reflect.',
-  'Recordings are not saved, and the transcript is deleted after the summary is created.',
+  'Recordings are not saved. The transcript is sent to an AI service (OpenAI) to write a summary, and it is deleted after the summary is created.',
   'If anyone prefers not to be recorded, I will stop.”',
 ];
 

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Spool",
     "slug": "spool",
-    "version": "1.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "spool",
@@ -13,8 +13,11 @@
         "dark": "./assets/images/ios-dark.png",
         "tinted": "./assets/images/ios-tinted.png"
       },
-      "bundleIdentifier": "com.spool.app",
+      "bundleIdentifier": "net.spoolapp.spool",
       "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Spool turns your session into text on this phone so it can create a summary for you to review.",
         "NSMicrophoneUsageDescription": "Spool uses the microphone during sessions you choose to record. Speech is transcribed on your phone and audio is never saved."
@@ -30,11 +33,11 @@
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
-      ]
+      ],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "output": "single",
