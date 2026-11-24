@@ -35,9 +35,12 @@
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.RECORD_AUDIO"
       ],
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"]
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "single",
@@ -98,9 +101,9 @@
         }
       },
       "eas": {
-        "projectId": "6181a9b0-234d-4183-adf4-106f725bbfe1"
+        "projectId": "e7df4be5-bc9d-4c50-84e7-5fc046bbce0c"
       }
     },
-    "owner": "rayyantariq"
+    "owner": "zasstech"
   }
 }
