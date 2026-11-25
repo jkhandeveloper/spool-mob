@@ -9,7 +9,7 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.spool.zasstech.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.spoolapp.net/api/v1"
       }
     },
     "production": {
@@ -18,7 +18,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.spool.zasstech.com/api/v1"
+        "EXPO_PUBLIC_API_URL": "https://api.spoolapp.net/api/v1"
       }
     }
   },

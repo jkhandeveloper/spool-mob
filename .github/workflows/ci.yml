@@ -12,7 +12,7 @@ concurrency:
 
 env:
   # The API the built app talks to (baked into the bundle at build time).
-  EXPO_PUBLIC_API_URL: https://api.spool.zasstech.com/api/v1
+  EXPO_PUBLIC_API_URL: https://api.spoolapp.net/api/v1
 
 jobs:
   check:

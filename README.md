@@ -37,7 +37,7 @@ In Expo Go or on web, everything else works, and the session screen offers **typ
 
 [.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every push and pull request. It checks types, runs lint, and bundles the app for iOS, Android and web.
 
-On pushes to `main` (or **Run workflow** under Actions → CI) it also builds installable apps pointed at `https://api.spool.zasstech.com/api/v1`. Open the run under Actions → CI and download them from **Artifacts** at the bottom. Artifacts are kept for 30 days.
+On pushes to `main` (or **Run workflow** under Actions → CI) it also builds installable apps pointed at `https://api.spoolapp.net/api/v1`. Open the run under Actions → CI and download them from **Artifacts** at the bottom. Artifacts are kept for 30 days.
 
 | Artifact | Install on a phone |
 |---|---|
@@ -49,7 +49,7 @@ For TestFlight or ad-hoc iPhone builds that install directly, you need an Apple 
 To build the same APK locally (needs JDK 17 and the Android SDK):
 
 ```bash
-EXPO_PUBLIC_API_URL=https://api.spool.zasstech.com/api/v1 npx expo prebuild --platform android --clean --no-install
+EXPO_PUBLIC_API_URL=https://api.spoolapp.net/api/v1 npx expo prebuild --platform android --clean --no-install
 cd android && ./gradlew assembleRelease   # → android/app/build/outputs/apk/release/app-release.apk
 ```
 
